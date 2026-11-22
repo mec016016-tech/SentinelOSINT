@@ -1,1 +1,293 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentinelOSINT</title>
+<style>
+*{box-sizing:border-box}
+body{
+ background:#0f172a;color:#e2e8f0;
+ font-family:Arial,sans-serif;margin:0;padding:20px
+}
+.container{max-width:650px;margin:auto}
+h1{text-align:center;color:#38bdf8}
+p{text-align:center;color:#94a3b8}
+.card{
+ background:#1e293b;border:1px solid #334155;
+ border-radius:12px;padding:16px;margin:15px 0
+}
+label{display:block;margin:12px 0 6px}
+input,button,textarea{
+ width:100%;padding:13px;border-radius:9px;
+ border:1px solid #334155;font-size:16px
+}
+input,textarea{background:#0f172a;color:white}
+button{
+ background:#0284c7;color:white;border:none;
+ margin-top:10px;cursor:pointer;font-weight:bold
+}
+button:hover{background:#0369a1}
+.secondary{background:#475569}
+.result{
+ white-space:pre-wrap;overflow-wrap:anywhere;
+ background:#020617;padding:15px;border-radius:10px;
+ min-height:80px;margin-top:12px
+}
+a{color:#38bdf8;overflow-wrap:anywhere}
+.small{font-size:12px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🛡 SentinelOSINT</h1>
+<p>Herramienta de revisión de privacidad digital</p>
+
+<div class="card">
+<h3>📧 Correo electrónico</h3>
+<label for="email">Correo</label>
+<input id="email" type="email" placeholder="correo@ejemplo.com">
+<button onclick="checkEmail()">Analizar correo</button>
+<div id="emailResult" class="result">Esperando análisis...</div>
+</div>
+
+<div class="card">
+<h3>📱 Teléfono</h3>
+<label for="phone">Número telefónico internacional</label>
+<input id="phone" type="tel" placeholder="+52 999 123 4567">
+<button onclick="checkPhone()">Validar teléfono</button>
+<div id="phoneResult" class="result">Esperando análisis...</div>
+</div>
+
+<div class="card">
+<h3>👤 Username</h3>
+<label for="username">Nombre de usuario</label>
+<input id="username" placeholder="username">
+<button onclick="checkUsername()">Buscar perfiles públicos</button>
+<div id="usernameResult" class="result">Esperando análisis...</div>
+</div>
+
+<div class="card">
+<h3>🔎 Huella digital pública</h3>
+<label for="footprint">Nombre, alias o término de búsqueda</label>
+<input id="footprint" placeholder="Término de búsqueda">
+<button onclick="checkFootprint()">Generar búsqueda pública</button>
+<div id="footprintResult" class="result">Esperando análisis...</div>
+</div>
+
+<div class="card">
+<h3>📋 Reporte</h3>
+<button onclick="generateReport()">Generar reporte completo</button>
+<button class="secondary" onclick="downloadReport()">Descargar reporte TXT</button>
+<div id="report" class="result">No hay reporte todavía.</div>
+</div>
+
+<div class="card">
+<h3>🔐 Recomendaciones</h3>
+<div class="result">
+• Utiliza contraseñas únicas.
+• Activa la autenticación de dos factores.
+• Revisa los dispositivos conectados.
+• Revoca sesiones desconocidas.
+• No compartas códigos de recuperación.
+• Revisa permisos de tus aplicaciones.
+• Solicita la eliminación de datos innecesarios.
+</div>
+</div>
+
+<p class="small">
+SentinelOSINT realiza validaciones locales y genera enlaces
+a consultas externas. No garantiza descubrir todas las
+exposiciones ni verifica automáticamente las bases de datos.
+</p>
+</div>
+
+<script>
+const results={};
+
+function show(id,text){
+ document.getElementById(id).textContent=text;
+}
+
+function checkEmail(){
+ const email=document.getElementById("email").value.trim();
+ const box="emailResult";
+
+ if(!email){
+  show(box,"Introduce un correo electrónico.");
+  return;
+ }
+
+ const valid=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+ if(!valid){
+  show(box,"El formato del correo no es válido.");
+  return;
+ }
+
+ const domain=email.split("@")[1];
+
+ results.email={
+  value:email,
+  valid:true,
+  domain:domain,
+  date:new Date().toLocaleString()
+ };
+
+ show(box,
+ "Formato válido.\n"+
+ "Dominio: "+domain+"\n"+
+ "No se ha comprobado la existencia del buzón.\n\n"+
+ "Consulta externa de posibles exposiciones:\n"+
+ "https://haveibeenpwned.com/\n\n"+
+ "Puedes abrir el sitio para continuar la comprobación."
+ );
+
+}
+
+function checkPhone(){
+ const phone=document.getElementById("phone").value.trim();
+ const cleaned=phone.replace(/[^\d+]/g,"");
+
+ if(!phone){
+  show("phoneResult","Introduce un teléfono.");
+  return;
+ }
+
+ const valid=/^\+[1-9]\d{7,14}$/.test(cleaned);
+
+ if(!valid){
+  show("phoneResult",
+  "Formato no válido para el estándar internacional.\n"+
+  "Usa +, el código de país y el número.\n"+
+  "Ejemplo: +521234567890");
+  return;
+ }
+
+ results.phone={
+  value:cleaned,
+  valid:true,
+  date:new Date().toLocaleString()
+ };
+
+ const query=encodeURIComponent(cleaned);
+
+ show("phoneResult",
+ "Formato internacional válido.\n"+
+ "Número: "+cleaned+"\n"+
+ "Esto no confirma quién es el propietario.\n\n"+
+ "Consulta de fuentes públicas:\n"+
+ "https://www.google.com/search?q="+query
+ );
+}
+
+function checkUsername(){
+ const username=document.getElementById("username").value.trim();
+
+ if(!username){
+  show("usernameResult","Introduce un username.");
+  return;
+ }
+
+ if(!/^[a-zA-Z0-9._-]{1,50}$/.test(username)){
+  show("usernameResult",
+  "Usa caracteres alfanuméricos, punto, guion o guion bajo.");
+  return;
+ }
+
+ const sites=[
+  ["Instagram","https://www.instagram.com/"],
+  ["GitHub","https://github.com/"],
+  ["Reddit","https://www.reddit.com/user/"],
+  ["TikTok","https://www.tiktok.com/@"],
+  ["Pinterest","https://www.pinterest.com/"],
+  ["YouTube","https://www.youtube.com/@"],
+  ["X","https://x.com/"]
+ ];
+
+ results.username={
+  value:username,
+  date:new Date().toLocaleString(),
+  sites:sites.map(s=>s[0])
+ };
+
+ const html=sites.map(s=>
+  s[0]+": "+s[1]+username
+ ).join("\n");
+
+ show("usernameResult",
+ "Username: "+username+"\n"+
+ "Se han preparado "+sites.length+
+ " enlaces para revisar manualmente.\n"+
+ "Una URL no confirma que el perfil exista.\n\n"+
+ html
+ );
+}
+
+function checkFootprint(){
+ const term=document.getElementById("footprint").value.trim();
+
+ if(!term){
+  show("footprintResult","Introduce un término.");
+  return;
+ }
+
+ results.footprint={
+  value:term,
+  date:new Date().toLocaleString()
+ };
+
+ show("footprintResult",
+ "Término: "+term+"\n\n"+
+ "Búsqueda web:\n"+
+ "https://www.google.com/search?q="+
+ encodeURIComponent('"'+term+'"')+"\n\n"+
+ "Búsqueda de imágenes:\n"+
+ "https://www.google.com/search?tbm=isch&q="+
+ encodeURIComponent(term)
+ );
+}
+
+function generateReport(){
+ const report={
+  tool:"SentinelOSINT",
+  generated:new Date().toLocaleString(),
+  email:results.email||"No analizado",
+  phone:results.phone||"No analizado",
+  username:results.username||"No analizado",
+  footprint:results.footprint||"No analizado",
+  disclaimer:"Validaciones locales y enlaces externos. "+
+  "No representa una confirmación de brechas."
+ };
+
+ const text=JSON.stringify(report,null,2);
+
+ results.report=text;
+
+ show("report",text);
+}
+
+function downloadReport(){
+ if(!results.report){
+  generateReport();
+ }
+
+ const blob=new Blob([results.report],{
+  type:"text/plain;charset=utf-8"
+ });
+
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+
+ a.href=url;
+ a.download="SentinelOSINT_report.txt";
+ a.click();
+
+ URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
+
